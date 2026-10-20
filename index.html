@@ -2,140 +2,175 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f1320">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
 <title>LA Neighborhoods — Learn & Quiz</title>
 <meta property="og:title" content="LA Neighborhoods — Learn & Quiz">
 <meta property="og:description" content="Learn the neighborhoods of Los Angeles County (Santa Monica, Culver City, Silver Lake, ...) on a map, then quiz yourself and challenge friends.">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <style>
-  :root{--bg:#0f1320;--panel:#171c2c;--line:#2a3147;--text:#e8ebf3;--muted:#9aa3bd;--accent:#ffb84d;--good:#36c48a;--bad:#ff5c6c}
-  *{box-sizing:border-box}
-  html,body{height:100%;margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text)}
-  #app{display:flex;flex-direction:column;height:100%}
-  header{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--panel);flex-wrap:wrap}
-  header h1{font-size:16px;margin:0 8px 0 0;white-space:nowrap}
-  .tabs{display:flex;gap:4px;background:#0c0f1a;padding:3px;border-radius:8px}
-  .tabs button{background:transparent;border:0;color:var(--muted);padding:6px 12px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600}
+  :root{--bg:#0f1320;--panel:#171c2c;--panel2:#0c0f1a;--line:#2a3147;--text:#e8ebf3;--muted:#9aa3bd;--accent:#ffb84d;--good:#36c48a;--bad:#ff5c6c;--sheet:46vh}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);overscroll-behavior:none}
+  button,select,input{font-family:inherit;touch-action:manipulation}
+  #app{display:flex;flex-direction:column;height:100%;height:100dvh}
+  header{display:flex;align-items:center;gap:8px;padding:8px 12px;padding-top:calc(8px + env(safe-area-inset-top));border-bottom:1px solid var(--line);background:var(--panel);flex:none}
+  header h1{font-size:16px;margin:0;white-space:nowrap}
+  header h1 small{display:none}
+  .tabs{display:flex;gap:2px;background:var(--panel2);padding:3px;border-radius:9px;margin-left:auto}
+  .tabs button{background:transparent;border:0;color:var(--muted);padding:7px 12px;border-radius:7px;cursor:pointer;font-size:13px;font-weight:600;min-height:34px}
   .tabs button.on{background:var(--accent);color:#1a1200}
-  .spacer{flex:1}
-  .btn{background:#232a40;border:1px solid var(--line);color:var(--text);padding:6px 10px;border-radius:6px;cursor:pointer;font-size:13px}
+  .ibtn{background:#232a40;border:1px solid var(--line);color:var(--text);min-width:36px;height:36px;padding:0 10px;border-radius:8px;cursor:pointer;font-size:14px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+  .ibtn.on{border-color:var(--accent);color:var(--accent)}
+  .ibtn .lbl{font-size:12px}
+  .btn{background:#232a40;border:1px solid var(--line);color:var(--text);padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;min-height:36px}
   .btn:hover{background:#2d3550}
   .btn.primary{background:var(--accent);color:#1a1200;border-color:var(--accent);font-weight:700}
-  #main{display:flex;flex:1;min-height:0}
-  #map{flex:1;background:#dfe6ea}
-  aside{width:340px;background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
-  .panel{padding:12px;border-bottom:1px solid var(--line)}
-  .panel h2{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
-  .chips{display:flex;flex-wrap:wrap;gap:6px}
-  .chip{font-size:12px;padding:4px 9px;border-radius:999px;border:1px solid var(--line);background:#0c0f1a;color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:6px}
+  .btn.sm{padding:4px 9px;font-size:12px;min-height:30px}
+  #main{position:relative;flex:1;min-height:0;display:flex}
+  #map{flex:1;background:#dfe6ea;min-width:0}
+  aside{width:360px;flex:none;background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+  .handle{display:none}
+  .content{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding-bottom:env(safe-area-inset-bottom);display:flex;flex-direction:column}
+  .content .panel{flex:none}
+  .panel{padding:12px 14px;border-bottom:1px solid var(--line)}
+  .panel h2{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 8px;display:flex;align-items:center;justify-content:space-between}
+  .panel h2 .btn{text-transform:none;letter-spacing:0}
+  .presets{display:flex;gap:6px;flex-wrap:wrap}
+  .presets .btn.on{border-color:var(--accent);color:var(--accent)}
+  .chips{display:none;flex-wrap:wrap;gap:6px;margin-top:10px}
+  .chips.open{display:flex}
+  .chip{font-size:12px;padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:var(--panel2);color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:6px;min-height:32px}
   .chip .sw{width:9px;height:9px;border-radius:50%;display:inline-block;opacity:.5}
   .chip.on{color:var(--text);border-color:#4a5578;background:#202842}
   .chip.on .sw{opacity:1}
-  .presets{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap}
-  .presets .btn{padding:3px 8px;font-size:12px}
+  #summary{font-size:12px;color:var(--muted);margin-top:8px}
   #prompt{font-size:22px;font-weight:700;line-height:1.2}
   #sub{color:var(--muted);font-size:13px;margin-top:4px}
-  .stats{display:flex;gap:14px;font-size:13px;color:var(--muted);margin-top:10px}
+  .stats{display:flex;gap:16px;font-size:13px;color:var(--muted);margin-top:10px}
   .stats b{color:var(--text);font-size:16px}
-  .choices{display:flex;flex-direction:column;gap:6px;margin-top:10px}
-  .choices button{text-align:left;background:#0c0f1a;border:1px solid var(--line);color:var(--text);padding:10px 12px;border-radius:8px;cursor:pointer;font-size:14px}
+  .choices{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+  .choices button{text-align:left;background:var(--panel2);border:1px solid var(--line);color:var(--text);padding:12px 14px;border-radius:10px;cursor:pointer;font-size:15px;min-height:46px}
   .choices button:hover{border-color:#4a5578}
   .choices button.good{border-color:var(--good);background:#10301f}
   .choices button.bad{border-color:var(--bad);background:#3a1620}
-  #feedback{margin-top:10px;font-size:14px;min-height:20px}
+  #feedback{margin-top:10px;font-size:14px;min-height:0}
   #feedback.good{color:var(--good)} #feedback.bad{color:var(--bad)}
   #fact{font-size:13px;line-height:1.45;color:#cfd5e6;margin-top:8px;border-left:3px solid var(--line);padding-left:8px}
   #fact:empty{display:none}
-  #learnPanel{max-height:55%;overflow:auto}
-  .blurb{font-size:13px;line-height:1.45;margin:8px 0;color:#cfd5e6}
-  .stats2{margin-top:6px}
-  .st{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:3px 0;border-bottom:1px dashed var(--line)}
-  .st span{color:var(--muted)} .st b{text-align:right}
-  .eth{margin-top:8px}
-  .bar{display:flex;align-items:center;gap:8px;font-size:12px;margin:2px 0}
-  .bar span{width:44px;color:var(--muted)} .bar em{font-style:normal;color:var(--muted);width:40px;text-align:right}
-  .track{flex:1;height:8px;background:#0c0f1a;border-radius:3px;overflow:hidden} .track i{display:block;height:100%;background:var(--accent)}
-  .src{font-size:12px;margin-top:8px} .src a{color:var(--accent)}
-  #list{flex:1;overflow:auto;padding:0 12px 12px}
-  #list input{width:100%;padding:8px;border-radius:6px;border:1px solid var(--line);background:#0c0f1a;color:var(--text);margin:10px 0 8px;font-size:14px}
-  .row{display:flex;align-items:center;gap:8px;padding:6px 4px;border-radius:6px;cursor:pointer;font-size:14px}
-  .row:hover{background:#202842}
+  .row2{display:flex;gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap}
+  .num{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
+  .num select{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:6px 8px;min-height:36px}
+  #end{display:none;margin-top:12px}
+  #end .row2{margin-top:8px}
+  #search{width:100%;padding:10px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-size:15px;margin-bottom:6px}
+  #rows .row{display:flex;align-items:center;gap:8px;padding:9px 4px;border-radius:6px;cursor:pointer;font-size:14px;min-height:40px}
+  #rows .row:hover{background:#202842}
   .row .sw{width:10px;height:10px;border-radius:2px;flex:none}
   .row .meta{color:var(--muted);font-size:11px;margin-left:auto;white-space:nowrap}
   .row .m{width:8px;height:8px;border-radius:50%;flex:none}
   #detail{font-size:14px;line-height:1.5}
   #detail .name{font-size:20px;font-weight:700}
   .muted{color:var(--muted)}
+  .blurb{font-size:13px;line-height:1.45;margin:8px 0;color:#cfd5e6}
+  .stats2{margin-top:6px}
+  .st{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:4px 0;border-bottom:1px dashed var(--line)}
+  .st span{color:var(--muted)} .st b{text-align:right}
+  .eth{margin-top:8px}
+  .bar{display:flex;align-items:center;gap:8px;font-size:12px;margin:3px 0}
+  .bar span{width:44px;color:var(--muted)} .bar em{font-style:normal;color:var(--muted);width:40px;text-align:right}
+  .track{flex:1;height:8px;background:var(--panel2);border-radius:3px;overflow:hidden} .track i{display:block;height:100%;background:var(--accent)}
+  .src{font-size:12px;margin-top:8px} .src a{color:var(--accent)}
   .leaflet-tooltip.nb{background:#171c2c;color:#fff;border:1px solid #4a5578;font-weight:600}
   .leaflet-container{font-family:inherit}
-  #toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#232a40;border:1px solid var(--line);padding:8px 14px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9999}
+  .leaflet-control-attribution{font-size:10px}
+  #toast{position:fixed;bottom:calc(16px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:#232a40;border:1px solid var(--line);padding:8px 14px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9999;white-space:nowrap}
   #toast.show{opacity:1}
-  #end{display:none}
-  .num{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
-  .num select{background:#0c0f1a;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:3px 6px}
-  label.tog{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:6px;cursor:pointer}
+  #hint{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(23,28,44,.92);border:1px solid var(--line);color:var(--text);padding:8px 12px;border-radius:999px;font-size:13px;font-weight:600;z-index:500;max-width:calc(100% - 110px);text-overflow:ellipsis;overflow:hidden;white-space:nowrap;display:none;pointer-events:none}
+
   @media (max-width:820px){
-    #main{flex-direction:column}
-    aside{width:100%;height:46%;border-left:0;border-top:1px solid var(--line)}
-    header h1{font-size:14px}
-    #prompt{font-size:18px}
+    header{padding:6px 10px;padding-top:calc(6px + env(safe-area-inset-top))}
+    header h1 .t{display:none}
+    header h1{font-size:18px}
+    header{overflow:hidden}
+    .ibtn .lbl{display:none}
+    .tabs{margin-left:0;flex:1;justify-content:center}
+    .tabs button{flex:1;padding:7px 6px;font-size:12px}
+    .ibtn{min-width:34px;height:34px;padding:0 8px}
+    #quizPanel,#learnPanel{order:-1}
+    #map{position:absolute;inset:0}
+    aside{position:absolute;left:0;right:0;bottom:0;width:auto;height:var(--sheet);max-height:92vh;border-left:0;border-top:1px solid var(--line);border-radius:16px 16px 0 0;box-shadow:0 -8px 30px rgba(0,0,0,.4);z-index:600;transition:height .25s ease}
+    aside.dragging{transition:none}
+    .handle{display:flex;justify-content:center;padding:10px 0 6px;flex:none;cursor:grab;touch-action:none}
+    .handle i{width:40px;height:5px;border-radius:3px;background:#4a5578;display:block}
+    #hint{display:block}
+    #prompt{font-size:19px}
+    .leaflet-bottom{bottom:var(--sheet)}
+    .leaflet-control-attribution{display:none}
   }
+  @media (hover:none){ .choices button:hover,.btn:hover,#rows .row:hover{background:var(--panel2)} }
 </style>
 </head>
 <body>
 <div id="app">
   <header>
-    <h1>🌴 LA Neighborhoods</h1>
+    <h1>🌴<span class="t"> LA Neighborhoods</span></h1>
     <div class="tabs">
       <button data-mode="learn" class="on">Learn</button>
       <button data-mode="find">Find it</button>
       <button data-mode="name">Name it</button>
     </div>
-    <div class="spacer"></div>
-    <label class="tog"><input type="checkbox" id="labels"> Street labels</label>
-    <button class="btn" id="shareBtn">Share link</button>
+    <button class="ibtn" id="labels" title="Toggle street labels">🏷<span class="lbl">Labels</span></button>
+    <button class="ibtn" id="shareBtn" title="Share link">↗<span class="lbl">Share</span></button>
   </header>
   <div id="main">
     <div id="map"></div>
-    <aside>
-      <div class="panel">
-        <h2>Regions</h2>
-        <div class="presets">
-          <button class="btn" data-preset="core">Core LA</button>
-          <button class="btn" data-preset="city">City of LA only</button>
-          <button class="btn" data-preset="westside">Westside</button>
-          <button class="btn" data-preset="all">Whole county</button>
+    <div id="hint"></div>
+    <aside id="sheet">
+      <div class="handle" id="handle"><i></i></div>
+      <div class="content" id="content">
+        <div class="panel">
+          <h2>Regions <button class="btn sm" id="customize">Customize ▾</button></h2>
+          <div class="presets">
+            <button class="btn sm" data-preset="core">Core LA</button>
+            <button class="btn sm" data-preset="city">City of LA</button>
+            <button class="btn sm" data-preset="westside">Westside</button>
+            <button class="btn sm" data-preset="all">Whole county</button>
+          </div>
+          <div class="chips" id="chips"></div>
+          <div id="summary"></div>
         </div>
-        <div class="chips" id="chips"></div>
-      </div>
-      <div class="panel" id="quizPanel" style="display:none">
-        <div id="prompt"></div>
-        <div id="sub"></div>
-        <div class="choices" id="choices"></div>
-        <div id="feedback"></div>
-        <div id="fact"></div>
-        <div class="stats">
-          <div>Score <b id="score">0</b>/<span id="asked">0</span></div>
-          <div>Streak <b id="streak">0</b></div>
-          <div>Best <b id="best">–</b></div>
+        <div class="panel" id="quizPanel" style="display:none">
+          <div id="prompt"></div>
+          <div id="sub"></div>
+          <div class="choices" id="choices"></div>
+          <div id="feedback"></div>
+          <div id="fact"></div>
+          <div class="stats">
+            <div>Score <b id="score">0</b>/<span id="asked">0</span></div>
+            <div>Streak <b id="streak">0</b></div>
+            <div>Best <b id="best">–</b></div>
+          </div>
+          <div id="end">
+            <div id="endText" style="font-size:15px"></div>
+            <div class="row2"><button class="btn primary" id="again">Play again</button><button class="btn" id="shareScore">Share score</button></div>
+          </div>
+          <div class="row2">
+            <button class="btn" id="skip">Skip</button>
+            <div class="num">Round of <select id="roundLen"><option>10</option><option>20</option><option>40</option></select></div>
+          </div>
         </div>
-        <div id="end" style="margin-top:12px">
-          <div id="endText" style="font-size:15px;margin-bottom:8px"></div>
-          <button class="btn primary" id="again">Play again</button>
-          <button class="btn" id="shareScore">Share score</button>
+        <div class="panel" id="learnPanel">
+          <div id="detail"><span class="muted">Tap a neighborhood on the map, or pick one from the list. Dots show your quiz mastery.</span></div>
         </div>
-        <div style="display:flex;gap:8px;margin-top:12px;align-items:center">
-          <button class="btn" id="skip">Skip</button>
-          <div class="num">Round of <select id="roundLen"><option>10</option><option>20</option><option>40</option></select></div>
+        <div class="panel" id="list">
+          <input id="search" placeholder="Search neighborhoods…" autocomplete="off">
+          <div id="rows"></div>
         </div>
-      </div>
-      <div class="panel" id="learnPanel">
-        <div id="detail"><span class="muted">Hover or click a neighborhood. Click a name in the list to fly to it. Dots show your quiz mastery.</span></div>
-      </div>
-      <div id="list">
-        <input id="search" placeholder="Search neighborhoods…">
-        <div id="rows"></div>
       </div>
     </aside>
   </div>
@@ -155,34 +190,52 @@ const PRESETS = {
   westside: ['westside'],
   all: REGION_ORDER.slice()
 };
-const COLORS = ['#ff6b6b','#ffb84d','#ffe66d','#8ce99a','#38d9a9','#66d9e8','#74c0fc','#9775fa','#f783ac','#e599f7','#a9e34b','#ffa94d','#63e6be','#4dabf7','#da77f2','#ff8787','#ffd43b','#b197fc','#69db7c'];
+const COLORS = ['#ff6b6b','#ffb84d','#ffe66d','#8ce99a','#38d9a9','#66d9e8','#74c0fc','#9775fa','#f783ac','#e599f7','#a9e34b','#ffa94d','#63e6be','#4dabf7','#da77f2','#ff8787'];
 const regionColor = r => COLORS[REGION_ORDER.indexOf(r) % COLORS.length];
 const TYPE_LABEL = {'standalone-city':'Independent city','segment-of-a-city':'Neighborhood of the City of L.A.','unincorporated-area':'Unincorporated L.A. County'};
 
 const $ = s => document.querySelector(s);
+const isMobile = () => matchMedia('(max-width:820px)').matches;
+const canHover = () => matchMedia('(hover:hover)').matches;
 const state = {
-  mode:'learn', regions:new Set(PRESETS.core), cityOnly:false,
-  features:[], layersById:new Map(), pool:[],
-  q:null, score:0, asked:0, streak:0, roundLen:10, locked:false,
+  mode:'learn', regions:new Set(PRESETS.core), cityOnly:false, preset:'core',
+  features:[], layersById:new Map(), pool:[], info:{},
+  q:null, score:0, asked:0, streak:0, roundLen:10, locked:false, timer:null,
   mastery: JSON.parse(localStorage.getItem('la_mastery')||'{}'),
   best: JSON.parse(localStorage.getItem('la_best')||'{}')
 };
 const saveLS = () => { localStorage.setItem('la_mastery', JSON.stringify(state.mastery)); localStorage.setItem('la_best', JSON.stringify(state.best)); };
 const toast = m => { const t=$('#toast'); t.textContent=m; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),2200); };
+const setHint = m => { const h=$('#hint'); h.textContent=m||''; h.style.display=(m&&isMobile())?'block':'none'; };
 
-// URL params → state (lets a shared link reproduce the same setup)
+// URL params → state
 const params = new URLSearchParams(location.search);
 if (params.get('mode')) state.mode = params.get('mode');
-if (params.get('regions')) state.regions = new Set(params.get('regions').split(',').filter(r=>REGION_LABEL[r]));
-if (params.get('city')==='1') state.cityOnly = true;
+if (params.get('regions')) { state.regions = new Set(params.get('regions').split(',').filter(r=>REGION_LABEL[r])); state.preset=null; }
+if (params.get('city')==='1') { state.cityOnly = true; state.regions=new Set(REGION_ORDER); state.preset='city'; }
 if (params.get('n')) state.roundLen = +params.get('n')||10;
 $('#roundLen').value = String(state.roundLen);
 
+// ---------- bottom sheet (mobile) ----------
+const sheet=$('#sheet'), handle=$('#handle');
+const SHEET = { peek: 46, full: 88 }; // vh
+let sheetVh = SHEET.peek;
+function setSheet(vh){ sheetVh=vh; document.documentElement.style.setProperty('--sheet', vh+'vh'); }
+function sheetPx(){ return isMobile()? sheet.getBoundingClientRect().height : 0; }
+handle.addEventListener('click', ()=> setSheet(sheetVh>60?SHEET.peek:SHEET.full));
+let drag=null;
+handle.addEventListener('touchstart', e=>{ drag={y:e.touches[0].clientY, h:sheet.getBoundingClientRect().height}; sheet.classList.add('dragging'); }, {passive:true});
+handle.addEventListener('touchmove', e=>{ if(!drag) return; const dy=drag.y-e.touches[0].clientY; const vh=Math.max(20,Math.min(92,(drag.h+dy)/innerHeight*100)); document.documentElement.style.setProperty('--sheet', vh+'vh'); sheetVh=vh; }, {passive:true});
+handle.addEventListener('touchend', ()=>{ drag=null; sheet.classList.remove('dragging'); setSheet(sheetVh>62?SHEET.full:SHEET.peek); });
+
 // ---------- map ----------
-const map = L.map('map', {zoomControl:true, preferCanvas:true}).setView([34.05,-118.35], 10);
+const map = L.map('map', {zoomControl:!isMobile(), preferCanvas:true, tap:true}).setView([34.05,-118.35], 10);
 const noLabels = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',{attribution:'Tiles &copy; Esri · Boundaries: LA Times Mapping L.A.',maxZoom:16}).addTo(map);
 const withLabels = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap contributors · Boundaries: LA Times Mapping L.A.',maxZoom:18});
-$('#labels').addEventListener('change', e => { if (e.target.checked){map.removeLayer(noLabels);withLabels.addTo(map);} else {map.removeLayer(withLabels);noLabels.addTo(map);} });
+let labelsOn=false;
+$('#labels').addEventListener('click', ()=>{ labelsOn=!labelsOn; $('#labels').classList.toggle('on',labelsOn); if(labelsOn){map.removeLayer(noLabels);withLabels.addTo(map);} else {map.removeLayer(withLabels);noLabels.addTo(map);} });
+addEventListener('resize', ()=>{ map.invalidateSize(); setHint($('#hint').textContent); });
+const fitOpts = (extra=20) => isMobile()? {paddingTopLeft:[extra,extra+44], paddingBottomRight:[extra, sheetPx()+extra]} : {padding:[extra+10,extra+10]};
 
 let geo;
 function baseStyle(f){
@@ -200,7 +253,7 @@ Promise.all([fetch('neighborhoods.json').then(r=>r.json()), fetch('info.json').t
     style: baseStyle,
     onEachFeature: (f, layer) => {
       state.layersById.set(f.id, layer);
-      layer.on('mouseover', () => { if(state.mode==='learn'){ layer.setStyle({weight:2.5,color:'#111',fillOpacity:0.7}); layer.bringToFront(); showDetail(f);} else if(!state.locked){ layer.setStyle({weight:2,color:'#111'}); } });
+      layer.on('mouseover', () => { if(!canHover()) return; if(state.mode==='learn'){ layer.setStyle({weight:2.5,color:'#111',fillOpacity:0.7}); layer.bringToFront(); showDetail(f);} else if(!state.locked){ layer.setStyle({weight:2,color:'#111'}); } });
       layer.on('mouseout', () => { if(!layer._hold) geo.resetStyle(layer); });
       layer.on('click', () => onClick(f, layer));
     }
@@ -211,7 +264,7 @@ Promise.all([fetch('neighborhoods.json').then(r=>r.json()), fetch('info.json').t
 function fitToPool(){
   const b = L.latLngBounds([]);
   state.features.forEach(f=>{ if(inPool(f)) b.extend(state.layersById.get(f.id).getBounds()); });
-  if (b.isValid()) map.fitBounds(b, {padding:[20,20]});
+  if (b.isValid()) map.fitBounds(b, fitOpts(10));
 }
 function refreshStyles(){ if(geo) geo.eachLayer(l=>{ l._hold=false; geo.resetStyle(l); }); }
 
@@ -222,17 +275,25 @@ function buildChips(){
     const n=state.features.filter(f=>f.properties.r===r).length;
     const el=document.createElement('button'); el.className='chip'+(state.regions.has(r)?' on':''); el.dataset.r=r;
     el.innerHTML=`<span class="sw" style="background:${regionColor(r)}"></span>${REGION_LABEL[r]} <span class="muted">${n}</span>`;
-    el.onclick=()=>{ state.regions.has(r)?state.regions.delete(r):state.regions.add(r); el.classList.toggle('on'); state.cityOnly=false; onPoolChange(); };
+    el.onclick=()=>{ state.regions.has(r)?state.regions.delete(r):state.regions.add(r); el.classList.toggle('on'); state.cityOnly=false; state.preset=null; onPoolChange(); };
     c.appendChild(el);
   });
+  updateSummary();
 }
+function updateSummary(){
+  document.querySelectorAll('[data-preset]').forEach(b=>b.classList.toggle('on', b.dataset.preset===state.preset));
+  const n=state.features.filter(inPool).length;
+  const scope=state.cityOnly?'City of LA only':state.regions.size===REGION_ORDER.length?'All regions':[...state.regions].map(r=>REGION_LABEL[r]).join(', ');
+  $('#summary').textContent=`${n} neighborhoods · ${scope}`;
+}
+$('#customize').onclick=()=>{ const c=$('#chips'); c.classList.toggle('open'); $('#customize').textContent=c.classList.contains('open')?'Done ▴':'Customize ▾'; };
 document.querySelectorAll('[data-preset]').forEach(b=>b.onclick=()=>{
-  const p=b.dataset.preset;
+  const p=b.dataset.preset; state.preset=p;
   if(p==='city'){ state.cityOnly=true; state.regions=new Set(REGION_ORDER); }
   else { state.cityOnly=false; state.regions=new Set(PRESETS[p]); }
   buildChips(); onPoolChange(); fitToPool();
 });
-function onPoolChange(){ state.pool=state.features.filter(inPool); refreshStyles(); renderList(); if(state.mode!=='learn') startRound(); }
+function onPoolChange(){ state.pool=state.features.filter(inPool); refreshStyles(); renderList(); updateSummary(); if(state.mode!=='learn') startRound(); }
 
 // ---------- learn ----------
 const fmt=n=>n==null?null:Number(n).toLocaleString('en-US');
@@ -250,6 +311,7 @@ function showDetail(f){
     ${hasStats?`<div class="stats2">${st('Population',pop?fmt(pop)+(I.pop2008?' <span class="muted">(2008 est.)</span>':' <span class="muted">(2000)</span>'):null)}${st('Area',I.sqmi!=null?I.sqmi+' sq mi':null)}${st('Density',I.density?fmt(I.density)+' / sq mi':null)}${st('Median household income',I.income?'$'+fmt(I.income):null)}${st('Median age',I.medianAge)}${st('Four-year degree',I.degreePct!=null?I.degreePct+'%':null)}${st('Foreign born',I.foreignPct!=null?I.foreignPct+'%':null)}${st('Top origins',I.origins&&I.origins.length?I.origins.join(', '):null)}${st('Household size',I.hhSize)}</div>${eth}`:''}
     ${m?`<div class="muted" style="margin-top:6px">Your quiz record: ${m.c}/${m.a} correct</div>`:''}
     <div class="src">${I.wiki?`<a href="${I.wiki}" target="_blank" rel="noopener">Wikipedia</a>`:''}${I.wiki&&I.lat?' · ':''}${I.lat?`<a href="${I.lat}" target="_blank" rel="noopener">LA Times profile</a>`:''}${hasStats?'<div class="muted">Stats: LA Times Mapping L.A. (2000 Census, 2008 estimates)</div>':''}</div>`;
+  setHint(p.n);
 }
 function renderList(){
   const q=($('#search').value||'').toLowerCase();
@@ -257,28 +319,35 @@ function renderList(){
   state.pool.filter(f=>f.properties.n.toLowerCase().includes(q)).sort((a,b)=>a.properties.n.localeCompare(b.properties.n)).forEach(f=>{
     const p=f.properties; const d=document.createElement('div'); d.className='row';
     d.innerHTML=`<span class="sw" style="background:${regionColor(p.r)}"></span>${p.n}<span class="meta">${p.t==='standalone-city'?'city':p.t==='unincorporated-area'?'unincorp.':''}</span><span class="m" style="background:${masteryColor(f.id)}"></span>`;
-    d.onclick=()=>{ const l=state.layersById.get(f.id); map.fitBounds(l.getBounds(),{padding:[40,40],maxZoom:14}); showDetail(f); flash(l,'#111',900); };
+    d.onclick=()=>{ selectLearn(f, true); };
     rows.appendChild(d);
   });
 }
+function selectLearn(f, fly){
+  refreshStyles(); const l=state.layersById.get(f.id);
+  l._hold=true; l.setStyle({weight:3,color:'#111',fillOpacity:0.75}); l.bringToFront();
+  showDetail(f);
+  if(fly) map.fitBounds(l.getBounds(), Object.assign({maxZoom:14}, fitOpts(30)));
+  if(isMobile()){ setSheet(SHEET.peek); $('#content').scrollTo({top:$('#learnPanel').offsetTop-8, behavior:'smooth'}); }
+}
 $('#search').addEventListener('input', renderList);
-function flash(layer,color,ms){ layer._hold=true; layer.setStyle({weight:3,color,fillOpacity:0.75}); layer.bringToFront(); setTimeout(()=>{ layer._hold=false; geo.resetStyle(layer); }, ms); }
 
 // ---------- modes ----------
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
 function setMode(m){
-  state.mode=m;
+  state.mode=m; clearTimeout(state.timer);
   document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.mode===m));
   $('#quizPanel').style.display = m==='learn'?'none':'';
   $('#learnPanel').style.display = m==='learn'?'':'none';
   $('#list').style.display = m==='learn'?'':'none';
-  state.pool=state.features.filter(inPool); refreshStyles(); renderList();
-  if(m!=='learn') startRound(); else { geo && geo.eachLayer(l=>l.unbindTooltip()); }
+  state.pool=state.features.filter(inPool); refreshStyles(); renderList(); updateSummary();
+  if(geo) geo.eachLayer(l=>l.unbindTooltip());
+  if(m!=='learn') startRound(); else setHint('');
+  if(isMobile()) { setSheet(SHEET.peek); $('#content').scrollTop=0; }
 }
 
 // ---------- quiz ----------
 function pickNext(){
-  // weight toward neighborhoods you've missed; avoid immediate repeat
   const cands=state.pool.filter(f=>!state.q||f.id!==state.q.id);
   const w=cands.map(f=>{ const m=state.mastery[f.id]; if(!m||!m.a) return 3; return 1+ (m.a-m.c)*2 + (m.c>=3?0:1); });
   let r=Math.random()*w.reduce((a,b)=>a+b,0);
@@ -286,9 +355,9 @@ function pickNext(){
   return cands[cands.length-1];
 }
 function startRound(){
-  state.score=0; state.asked=0; state.streak=0; state.locked=false; state.q=null;
+  state.score=0; state.asked=0; state.streak=0; state.locked=false; state.q=null; clearTimeout(state.timer);
   $('#end').style.display='none'; $('#skip').style.display=''; updateStats();
-  if(state.pool.length<2){ $('#prompt').textContent='Pick at least one region with 2+ neighborhoods.'; $('#sub').textContent=''; $('#choices').innerHTML=''; return; }
+  if(state.pool.length<4){ $('#prompt').textContent='Pick regions with at least 4 neighborhoods.'; $('#sub').textContent=''; $('#choices').innerHTML=''; setHint(''); return; }
   nextQ();
 }
 function bestKey(){ return state.mode+'|'+state.roundLen+'|'+(state.cityOnly?'city':[...state.regions].sort().join(',')); }
@@ -302,42 +371,44 @@ function nextQ(){
   clearTimeout(state.timer); state.q=pickNext();
   const p=state.q.properties;
   if(state.mode==='find'){
-    $('#prompt').textContent=p.n; $('#sub').textContent=`Click it on the map · ${REGION_LABEL[p.r]} · ${state.asked+1} of ${state.roundLen}`;
-    $('#choices').innerHTML='';
+    $('#prompt').textContent=p.n; $('#sub').textContent=`Tap it on the map · ${REGION_LABEL[p.r]} · ${state.asked+1} of ${state.roundLen}`;
+    $('#choices').innerHTML=''; setHint(`Find: ${p.n}`);
   } else {
     const l=state.layersById.get(state.q.id);
     l._hold=true; l.setStyle({weight:3,color:'#111',fillOpacity:0.8}); l.bringToFront();
-    map.fitBounds(l.getBounds(),{padding:[60,60],maxZoom:13});
+    map.fitBounds(l.getBounds(), Object.assign({maxZoom:13}, fitOpts(40)));
     $('#prompt').textContent='What is this neighborhood?'; $('#sub').textContent=`${REGION_LABEL[p.r]} · ${state.asked+1} of ${state.roundLen}`;
+    setHint('Which neighborhood is highlighted?');
     const same=state.pool.filter(f=>f.id!==state.q.id&&f.properties.r===p.r), other=state.pool.filter(f=>f.id!==state.q.id&&f.properties.r!==p.r);
-    const d=shuffle(same).slice(0,3); while(d.length<3&&other.length) d.push(shuffle(other).find(f=>!d.includes(f)));
-    const opts=shuffle([state.q,...d.filter(Boolean)]);
+    const d=shuffle(same).slice(0,3); const o=shuffle(other); while(d.length<3&&o.length) d.push(o.pop());
+    const opts=shuffle([state.q,...d]);
     $('#choices').innerHTML='';
     opts.forEach(f=>{ const b=document.createElement('button'); b.textContent=f.properties.n; b.onclick=()=>answer(f, b); $('#choices').appendChild(b); });
   }
+  if(isMobile()) $('#content').scrollTop=0;
 }
 function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
 function record(id, ok){ const m=state.mastery[id]||(state.mastery[id]={c:0,a:0}); m.a++; if(ok) m.c++; saveLS(); }
 function onClick(f, layer){
-  if(state.mode==='learn'){ showDetail(f); return; }
+  if(state.mode==='learn'){ selectLearn(f, false); return; }
   if(state.mode==='find' && !state.locked && inPool(f)) answer(f, null, layer);
 }
 function answer(f, btn, layer){
   if(state.locked) return; state.locked=true;
   const ok=f.id===state.q.id; state.asked++; record(state.q.id, ok);
   const qLayer=state.layersById.get(state.q.id);
-  if(ok){ state.score++; state.streak++; $('#feedback').textContent='✓ Correct — '+state.q.properties.n; $('#feedback').className='good'; }
-  else { state.streak=0; $('#feedback').textContent=`✗ That was ${f.properties.n}. ${state.q.properties.n} is highlighted in green.`; $('#feedback').className='bad'; }
+  if(ok){ state.score++; state.streak++; $('#feedback').textContent='✓ Correct — '+state.q.properties.n; $('#feedback').className='good'; setHint('✓ '+state.q.properties.n); }
+  else { state.streak=0; $('#feedback').textContent=f.id===-1?`Skipped. ${state.q.properties.n} is highlighted in green.`:`✗ That was ${f.properties.n}. ${state.q.properties.n} is highlighted in green.`; $('#feedback').className='bad'; setHint('✗ '+state.q.properties.n+' (green)'); }
   qLayer._hold=true; qLayer.setStyle({color:'#1b7f4f',fillColor:'#36c48a',fillOpacity:0.85,weight:3}); qLayer.bringToFront();
   if(!ok && layer){ layer._hold=true; layer.setStyle({color:'#a0202e',fillColor:'#ff5c6c',fillOpacity:0.8,weight:3}); }
   if(btn){ btn.classList.add(ok?'good':'bad'); [...$('#choices').children].forEach(b=>{ if(b.textContent===state.q.properties.n) b.classList.add('good'); b.disabled=true; }); }
-  if(state.mode==='find') qLayer.bindTooltip(state.q.properties.n,{permanent:true,direction:'center',className:'nb'}).openTooltip();
+  if(state.mode==='find'){ qLayer.bindTooltip(state.q.properties.n,{permanent:true,direction:'center',className:'nb'}).openTooltip(); if(!ok) map.fitBounds(qLayer.getBounds(), Object.assign({maxZoom:12}, fitOpts(40))); }
   updateStats();
   const I=(state.info||{})[state.q.properties.n]; $('#fact').textContent = I&&I.blurb ? firstSentences(I.blurb,2) : '';
   $('#skip').textContent='Next ▸';
-  state.timer=setTimeout(()=>{ qLayer.unbindTooltip(); nextQ(); }, ok?3500:5500);
+  state.timer=setTimeout(()=>{ qLayer.unbindTooltip(); if(state.mode==='find'&&!ok) fitToPool(); nextQ(); }, ok?3500:6000);
 }
-$('#skip').onclick=()=>{ if(state.mode==='learn'||!state.q) return; if(state.locked){ if($('#end').style.display!=='none') return; clearTimeout(state.timer); state.layersById.get(state.q.id).unbindTooltip(); nextQ(); return; } answer({id:-1,properties:{n:'skipped'}}, null, null); };
+$('#skip').onclick=()=>{ if(state.mode==='learn'||!state.q) return; if(state.locked){ if($('#end').style.display!=='none') return; clearTimeout(state.timer); state.layersById.get(state.q.id).unbindTooltip(); if(state.mode==='find') fitToPool(); nextQ(); return; } answer({id:-1,properties:{n:'skipped'}}, null, null); };
 document.addEventListener('keydown', e=>{ if((e.key==='Enter'||e.key===' ')&&state.mode!=='learn'&&state.locked&&e.target.tagName!=='INPUT'&&e.target.tagName!=='SELECT'){ e.preventDefault(); $('#skip').click(); } });
 $('#roundLen').onchange=e=>{ state.roundLen=+e.target.value; startRound(); };
 $('#again').onclick=startRound;
@@ -346,8 +417,9 @@ function endRound(){
   const k=bestKey(); if(state.best[k]==null||state.score>state.best[k]) state.best[k]=state.score; saveLS(); updateStats();
   const pct=Math.round(100*state.score/state.roundLen);
   $('#prompt').textContent=`Round over: ${state.score}/${state.roundLen}`; $('#sub').textContent=pct===100?'Perfect. You are a local.':pct>=70?'Solid. Keep going.':'Hit Learn mode and try again.';
-  $('#choices').innerHTML=''; $('#feedback').textContent=''; $('#skip').style.display='none';
-  $('#end').style.display=''; $('#endText').textContent='';
+  $('#choices').innerHTML=''; $('#feedback').textContent=''; $('#fact').textContent=''; $('#skip').style.display='none';
+  $('#end').style.display=''; setHint(`Round over: ${state.score}/${state.roundLen}`);
+  if(state.mode==='find') fitToPool();
 }
 
 // ---------- share ----------
@@ -359,7 +431,7 @@ function shareUrl(){
   return u.toString();
 }
 async function share(text, url){
-  if(navigator.share){ try{ await navigator.share({title:'LA Neighborhoods quiz', text, url}); return; }catch(e){} }
+  if(navigator.share){ try{ await navigator.share({title:'LA Neighborhoods quiz', text, url}); return; }catch(e){ if(e.name==='AbortError') return; } }
   try{ await navigator.clipboard.writeText(text?text+' '+url:url); toast('Link copied to clipboard'); }catch(e){ prompt('Copy this link:', url); }
 }
 $('#shareBtn').onclick=()=>share('', shareUrl());
