@@ -16,7 +16,9 @@ Region filters: Core LA (default), City of LA only, Westside, or the whole count
 
 ## Data
 
-Boundaries from the LA Times [Mapping L.A.](https://maps.latimes.com/neighborhoods/) project (v6 neighborhood set). Basemap tiles by Esri and OpenStreetMap.
+Boundaries from the LA Times [Mapping L.A.](https://maps.latimes.com/neighborhoods/) project (v6 neighborhood set, Orange County entries removed). Basemap tiles by Esri and OpenStreetMap.
+
+Neighborhood statistics come from the U.S. Census Bureau's American Community Survey 2020–2024 5-year estimates (via the [Census Reporter](https://censusreporter.org) API). Neighborhoods are not census geographies, so each block group is assigned to the neighborhood containing its centroid; counts are summed and medians (income, age, rent, home value) are household-weighted averages of block-group medians. Foreign-born share uses tract-level data the same way. Treat the figures as close approximations. Descriptions are Wikipedia summaries where available.
 
 ## Run locally
 

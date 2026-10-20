@@ -301,16 +301,15 @@ function firstSentences(s,n){ if(!s) return ''; const parts=s.match(/[^.!?]+[.!?
 function showDetail(f){
   const p=f.properties, m=state.mastery[f.id], I=(state.info||{})[p.n]||{};
   const st=(l,v)=>v==null?'':`<div class="st"><span>${l}</span><b>${v}</b></div>`;
-  const pop=I.pop2008||I.pop2000;
   let eth='';
-  if(I.ethnicity){ eth='<div class="eth">'+['Latino','White','Asian','Black','Other'].filter(k=>I.ethnicity[k]!=null).map(k=>`<div class="bar"><span>${k}</span><div class="track"><i style="width:${Math.min(100,I.ethnicity[k])}%"></i></div><em>${I.ethnicity[k]}%</em></div>`).join('')+(I.diversity?`<div class="muted" style="font-size:12px;margin-top:4px">${I.diversity} (county comparison)</div>`:'')+'</div>'; }
-  const hasStats=I.income!=null||I.sqmi!=null;
+  if(I.ethnicity){ eth='<div class="eth">'+['Latino','White','Asian','Black','Other'].filter(k=>I.ethnicity[k]!=null).map(k=>`<div class="bar"><span>${k}</span><div class="track"><i style="width:${Math.min(100,I.ethnicity[k])}%"></i></div><em>${I.ethnicity[k]}%</em></div>`).join('')+'</div>'; }
+  const hasStats=I.pop!=null;
   $('#detail').innerHTML=`<div class="name">${p.n}</div>
     <div><span class="sw" style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${regionColor(p.r)};margin-right:6px"></span>${REGION_LABEL[p.r]} <span class="muted">· ${TYPE_LABEL[p.t]||p.t}</span></div>
     ${I.blurb?`<p class="blurb">${I.blurb}</p>`:''}
-    ${hasStats?`<div class="stats2">${st('Population',pop?fmt(pop)+(I.pop2008?' <span class="muted">(2008 est.)</span>':' <span class="muted">(2000)</span>'):null)}${st('Area',I.sqmi!=null?I.sqmi+' sq mi':null)}${st('Density',I.density?fmt(I.density)+' / sq mi':null)}${st('Median household income',I.income?'$'+fmt(I.income):null)}${st('Median age',I.medianAge)}${st('Four-year degree',I.degreePct!=null?I.degreePct+'%':null)}${st('Foreign born',I.foreignPct!=null?I.foreignPct+'%':null)}${st('Top origins',I.origins&&I.origins.length?I.origins.join(', '):null)}${st('Household size',I.hhSize)}</div>${eth}`:''}
+    ${hasStats?`<div class="stats2">${st('Population',fmt(I.pop))}${st('Area',I.sqmi!=null?I.sqmi+' sq mi':null)}${st('Density',I.density?fmt(I.density)+' / sq mi':null)}${st('Median household income',I.income?'$'+fmt(I.income):null)}${st('Median age',I.medianAge)}${st('Bachelor\'s degree or higher',I.degreePct!=null?I.degreePct+'%':null)}${st('Foreign born',I.foreignPct!=null?I.foreignPct+'%':null)}${st('Homeowners',I.ownerPct!=null?I.ownerPct+'%':null)}${st('Median rent',I.medianRent?'$'+fmt(I.medianRent)+' / mo':null)}${st('Median home value',I.homeValue?'$'+fmt(I.homeValue):null)}${st('Household size',I.hhSize)}</div>${eth}`:`<div class="muted" style="margin-top:8px">${I.sqmi!=null?I.sqmi+' sq mi · ':''}No resident population data (park, reservoir or very small area).</div>`}
     ${m?`<div class="muted" style="margin-top:6px">Your quiz record: ${m.c}/${m.a} correct</div>`:''}
-    <div class="src">${I.wiki?`<a href="${I.wiki}" target="_blank" rel="noopener">Wikipedia</a>`:''}${I.wiki&&I.lat?' · ':''}${I.lat?`<a href="${I.lat}" target="_blank" rel="noopener">LA Times profile</a>`:''}${hasStats?'<div class="muted">Stats: LA Times Mapping L.A. (2000 Census, 2008 estimates)</div>':''}</div>`;
+    <div class="src">${I.wiki?`<a href="${I.wiki}" target="_blank" rel="noopener">Wikipedia</a>`:''}${I.wiki&&I.lat?' · ':''}${I.lat?`<a href="${I.lat}" target="_blank" rel="noopener">LA Times profile</a>`:''}${hasStats?`<div class="muted">Stats: U.S. Census ACS 2020–2024 5-year, aggregated from ${I.bgCount||''} block groups by centroid. Medians are household-weighted averages of block-group medians.</div>`:''}</div>`;
   setHint(p.n);
 }
 function renderList(){
