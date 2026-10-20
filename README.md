@@ -20,6 +20,8 @@ Boundaries from the LA Times [Mapping L.A.](https://maps.latimes.com/neighborhoo
 
 Neighborhood statistics come from the U.S. Census Bureau's American Community Survey 2020–2024 5-year estimates (via the [Census Reporter](https://censusreporter.org) API). Neighborhoods are not census geographies, so each block group is assigned to the neighborhood containing its centroid; counts are summed and medians (income, age, rent, home value) are household-weighted averages of block-group medians. Foreign-born share uses tract-level data the same way. Treat the figures as close approximations. Descriptions are Wikipedia summaries where available.
 
+Points of interest ("See & do", "Eat & drink") are Wikidata items with English Wikipedia articles located inside each neighborhood polygon, typed as restaurants, bars, museums, parks, theatres, landmarks, venues and similar, ranked by Wikipedia sitelink count. They're a notability proxy, not a critic's list.
+
 ## Run locally
 
 ```

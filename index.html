@@ -85,6 +85,8 @@
   .bar span{width:44px;color:var(--muted)} .bar em{font-style:normal;color:var(--muted);width:40px;text-align:right}
   .track{flex:1;height:8px;background:var(--panel2);border-radius:3px;overflow:hidden} .track i{display:block;height:100%;background:var(--accent)}
   .src{font-size:12px;margin-top:8px} .src a{color:var(--accent)}
+  .poi{margin-top:10px} .poi h3{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 4px}
+  .pi{font-size:13px;line-height:1.4;padding:3px 0} .pi a{color:var(--text);font-weight:600;text-decoration:none} .pi a:hover{color:var(--accent)}
   .leaflet-tooltip.nb{background:#171c2c;color:#fff;border:1px solid #4a5578;font-weight:600}
   .leaflet-container{font-family:inherit}
   .leaflet-control-attribution{font-size:10px}
@@ -308,9 +310,23 @@ function showDetail(f){
     <div><span class="sw" style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${regionColor(p.r)};margin-right:6px"></span>${REGION_LABEL[p.r]} <span class="muted">· ${TYPE_LABEL[p.t]||p.t}</span></div>
     ${I.blurb?`<p class="blurb">${I.blurb}</p>`:''}
     ${hasStats?`<div class="stats2">${st('Population',fmt(I.pop))}${st('Area',I.sqmi!=null?I.sqmi+' sq mi':null)}${st('Density',I.density?fmt(I.density)+' / sq mi':null)}${st('Median household income',I.income?'$'+fmt(I.income):null)}${st('Median age',I.medianAge)}${st('Bachelor\'s degree or higher',I.degreePct!=null?I.degreePct+'%':null)}${st('Foreign born',I.foreignPct!=null?I.foreignPct+'%':null)}${st('Homeowners',I.ownerPct!=null?I.ownerPct+'%':null)}${st('Median rent',I.medianRent?'$'+fmt(I.medianRent)+' / mo':null)}${st('Median home value',I.homeValue?'$'+fmt(I.homeValue):null)}${st('Household size',I.hhSize)}</div>${eth}`:`<div class="muted" style="margin-top:8px">${I.sqmi!=null?I.sqmi+' sq mi · ':''}No resident population data (park, reservoir or very small area).</div>`}
+    ${poiHtml(I)}
     ${m?`<div class="muted" style="margin-top:6px">Your quiz record: ${m.c}/${m.a} correct</div>`:''}
     <div class="src">${I.wiki?`<a href="${I.wiki}" target="_blank" rel="noopener">Wikipedia</a>`:''}${I.wiki&&I.lat?' · ':''}${I.lat?`<a href="${I.lat}" target="_blank" rel="noopener">LA Times profile</a>`:''}${hasStats?`<div class="muted">Stats: U.S. Census ACS 2020–2024 5-year, aggregated from ${I.bgCount||''} block groups by centroid. Medians are household-weighted averages of block-group medians.</div>`:''}</div>`;
   setHint(p.n);
+  showPois(I.poi||[]);
+}
+const wurl=t=>'https://en.wikipedia.org/wiki/'+encodeURIComponent(t.replace(/ /g,'_'));
+const disp=t=>t.replace(/\s*\([^)]*\)$/,'').replace(/,\s*(Los Angeles|California|Hollywood|Santa Monica|Long Beach|Pasadena)\b.*$/,'');
+function poiHtml(I){
+  const poi=I.poi||[]; if(!poi.length) return '';
+  const grp=(c,label,icon)=>{ const xs=poi.filter(p=>p.c===c); if(!xs.length) return ''; return `<div class="poi"><h3>${icon} ${label}</h3>${xs.map(p=>`<div class="pi"><a href="${wurl(p.t)}" target="_blank" rel="noopener">${disp(p.t)}</a>${p.d?`<span class="muted"> — ${p.d}</span>`:''}</div>`).join('')}</div>`; };
+  return grp('see','See & do','📍')+grp('eat','Eat & drink','🍴')+`<div class="muted" style="font-size:11px;margin-top:4px">Places with Wikipedia articles, ranked by how many languages cover them (Wikidata). Tap a dot on the map to open the article.</div>`;
+}
+const poiLayer=L.layerGroup().addTo(map);
+function showPois(poi){
+  poiLayer.clearLayers();
+  poi.forEach(p=>{ L.circleMarker([p.lat,p.lon],{radius:6,color:'#fff',weight:1.5,fillColor:p.c==='eat'?'#ff5c6c':'#4dabf7',fillOpacity:0.95}).bindTooltip((p.c==='eat'?'🍴 ':'📍 ')+disp(p.t),{direction:'top',className:'nb'}).on('click',()=>window.open(wurl(p.t),'_blank')).addTo(poiLayer); });
 }
 function renderList(){
   const q=($('#search').value||'').toLowerCase();
@@ -341,6 +357,7 @@ function setMode(m){
   $('#list').style.display = m==='learn'?'':'none';
   state.pool=state.features.filter(inPool); refreshStyles(); renderList(); updateSummary();
   if(geo) geo.eachLayer(l=>l.unbindTooltip());
+  poiLayer.clearLayers();
   if(m!=='learn') startRound(); else setHint('');
   if(isMobile()) { setSheet(SHEET.peek); $('#content').scrollTop=0; }
 }
@@ -403,7 +420,8 @@ function answer(f, btn, layer){
   if(btn){ btn.classList.add(ok?'good':'bad'); [...$('#choices').children].forEach(b=>{ if(b.textContent===state.q.properties.n) b.classList.add('good'); b.disabled=true; }); }
   if(state.mode==='find'){ qLayer.bindTooltip(state.q.properties.n,{permanent:true,direction:'center',className:'nb'}).openTooltip(); if(!ok) map.fitBounds(qLayer.getBounds(), Object.assign({maxZoom:12}, fitOpts(40))); }
   updateStats();
-  const I=(state.info||{})[state.q.properties.n]; $('#fact').textContent = I&&I.blurb ? firstSentences(I.blurb,2) : '';
+  const I=(state.info||{})[state.q.properties.n]||{}; const spots=(I.poi||[]).slice(0,4).map(p=>disp(p.t));
+  $('#fact').textContent = (I.blurb ? firstSentences(I.blurb,2) : '') + (spots.length? (I.blurb?' ':'')+'Known for: '+spots.join(', ')+'.' : '');
   $('#skip').textContent='Next ▸';
   state.timer=setTimeout(()=>{ qLayer.unbindTooltip(); if(state.mode==='find'&&!ok) fitToPool(); nextQ(); }, ok?3500:6000);
 }
