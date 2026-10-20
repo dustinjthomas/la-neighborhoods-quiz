@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LA Neighborhoods — Learn & Quiz</title>
+<meta property="og:title" content="LA Neighborhoods — Learn & Quiz">
+<meta property="og:description" content="Learn the neighborhoods of Los Angeles County (Santa Monica, Culver City, Silver Lake, ...) on a map, then quiz yourself and challenge friends.">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<style>
+  :root{--bg:#0f1320;--panel:#171c2c;--line:#2a3147;--text:#e8ebf3;--muted:#9aa3bd;--accent:#ffb84d;--good:#36c48a;--bad:#ff5c6c}
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text)}
+  #app{display:flex;flex-direction:column;height:100%}
+  header{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--panel);flex-wrap:wrap}
+  header h1{font-size:16px;margin:0 8px 0 0;white-space:nowrap}
+  .tabs{display:flex;gap:4px;background:#0c0f1a;padding:3px;border-radius:8px}
+  .tabs button{background:transparent;border:0;color:var(--muted);padding:6px 12px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600}
+  .tabs button.on{background:var(--accent);color:#1a1200}
+  .spacer{flex:1}
+  .btn{background:#232a40;border:1px solid var(--line);color:var(--text);padding:6px 10px;border-radius:6px;cursor:pointer;font-size:13px}
+  .btn:hover{background:#2d3550}
+  .btn.primary{background:var(--accent);color:#1a1200;border-color:var(--accent);font-weight:700}
+  #main{display:flex;flex:1;min-height:0}
+  #map{flex:1;background:#dfe6ea}
+  aside{width:340px;background:var(--panel);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+  .panel{padding:12px;border-bottom:1px solid var(--line)}
+  .panel h2{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{font-size:12px;padding:4px 9px;border-radius:999px;border:1px solid var(--line);background:#0c0f1a;color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:6px}
+  .chip .sw{width:9px;height:9px;border-radius:50%;display:inline-block;opacity:.5}
+  .chip.on{color:var(--text);border-color:#4a5578;background:#202842}
+  .chip.on .sw{opacity:1}
+  .presets{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap}
+  .presets .btn{padding:3px 8px;font-size:12px}
+  #prompt{font-size:22px;font-weight:700;line-height:1.2}
+  #sub{color:var(--muted);font-size:13px;margin-top:4px}
+  .stats{display:flex;gap:14px;font-size:13px;color:var(--muted);margin-top:10px}
+  .stats b{color:var(--text);font-size:16px}
+  .choices{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+  .choices button{text-align:left;background:#0c0f1a;border:1px solid var(--line);color:var(--text);padding:10px 12px;border-radius:8px;cursor:pointer;font-size:14px}
+  .choices button:hover{border-color:#4a5578}
+  .choices button.good{border-color:var(--good);background:#10301f}
+  .choices button.bad{border-color:var(--bad);background:#3a1620}
+  #feedback{margin-top:10px;font-size:14px;min-height:20px}
+  #feedback.good{color:var(--good)} #feedback.bad{color:var(--bad)}
+  #fact{font-size:13px;line-height:1.45;color:#cfd5e6;margin-top:8px;border-left:3px solid var(--line);padding-left:8px}
+  #fact:empty{display:none}
+  #learnPanel{max-height:55%;overflow:auto}
+  .blurb{font-size:13px;line-height:1.45;margin:8px 0;color:#cfd5e6}
+  .stats2{margin-top:6px}
+  .st{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:3px 0;border-bottom:1px dashed var(--line)}
+  .st span{color:var(--muted)} .st b{text-align:right}
+  .eth{margin-top:8px}
+  .bar{display:flex;align-items:center;gap:8px;font-size:12px;margin:2px 0}
+  .bar span{width:44px;color:var(--muted)} .bar em{font-style:normal;color:var(--muted);width:40px;text-align:right}
+  .track{flex:1;height:8px;background:#0c0f1a;border-radius:3px;overflow:hidden} .track i{display:block;height:100%;background:var(--accent)}
+  .src{font-size:12px;margin-top:8px} .src a{color:var(--accent)}
+  #list{flex:1;overflow:auto;padding:0 12px 12px}
+  #list input{width:100%;padding:8px;border-radius:6px;border:1px solid var(--line);background:#0c0f1a;color:var(--text);margin:10px 0 8px;font-size:14px}
+  .row{display:flex;align-items:center;gap:8px;padding:6px 4px;border-radius:6px;cursor:pointer;font-size:14px}
+  .row:hover{background:#202842}
+  .row .sw{width:10px;height:10px;border-radius:2px;flex:none}
+  .row .meta{color:var(--muted);font-size:11px;margin-left:auto;white-space:nowrap}
+  .row .m{width:8px;height:8px;border-radius:50%;flex:none}
+  #detail{font-size:14px;line-height:1.5}
+  #detail .name{font-size:20px;font-weight:700}
+  .muted{color:var(--muted)}
+  .leaflet-tooltip.nb{background:#171c2c;color:#fff;border:1px solid #4a5578;font-weight:600}
+  .leaflet-container{font-family:inherit}
+  #toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#232a40;border:1px solid var(--line);padding:8px 14px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9999}
+  #toast.show{opacity:1}
+  #end{display:none}
+  .num{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
+  .num select{background:#0c0f1a;color:var(--text);border:1px solid var(--line);border-radius:6px;padding:3px 6px}
+  label.tog{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:6px;cursor:pointer}
+  @media (max-width:820px){
+    #main{flex-direction:column}
+    aside{width:100%;height:46%;border-left:0;border-top:1px solid var(--line)}
+    header h1{font-size:14px}
+    #prompt{font-size:18px}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>🌴 LA Neighborhoods</h1>
+    <div class="tabs">
+      <button data-mode="learn" class="on">Learn</button>
+      <button data-mode="find">Find it</button>
+      <button data-mode="name">Name it</button>
+    </div>
+    <div class="spacer"></div>
+    <label class="tog"><input type="checkbox" id="labels"> Street labels</label>
+    <button class="btn" id="shareBtn">Share link</button>
+  </header>
+  <div id="main">
+    <div id="map"></div>
+    <aside>
+      <div class="panel">
+        <h2>Regions</h2>
+        <div class="presets">
+          <button class="btn" data-preset="core">Core LA</button>
+          <button class="btn" data-preset="city">City of LA only</button>
+          <button class="btn" data-preset="westside">Westside</button>
+          <button class="btn" data-preset="all">Whole county</button>
+        </div>
+        <div class="chips" id="chips"></div>
+      </div>
+      <div class="panel" id="quizPanel" style="display:none">
+        <div id="prompt"></div>
+        <div id="sub"></div>
+        <div class="choices" id="choices"></div>
+        <div id="feedback"></div>
+        <div id="fact"></div>
+        <div class="stats">
+          <div>Score <b id="score">0</b>/<span id="asked">0</span></div>
+          <div>Streak <b id="streak">0</b></div>
+          <div>Best <b id="best">–</b></div>
+        </div>
+        <div id="end" style="margin-top:12px">
+          <div id="endText" style="font-size:15px;margin-bottom:8px"></div>
+          <button class="btn primary" id="again">Play again</button>
+          <button class="btn" id="shareScore">Share score</button>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px;align-items:center">
+          <button class="btn" id="skip">Skip</button>
+          <div class="num">Round of <select id="roundLen"><option>10</option><option>20</option><option>40</option></select></div>
+        </div>
+      </div>
+      <div class="panel" id="learnPanel">
+        <div id="detail"><span class="muted">Hover or click a neighborhood. Click a name in the list to fly to it. Dots show your quiz mastery.</span></div>
+      </div>
+      <div id="list">
+        <input id="search" placeholder="Search neighborhoods…">
+        <div id="rows"></div>
+      </div>
+    </aside>
+  </div>
+</div>
+<div id="toast"></div>
+<script>
+(() => {
+const REGION_LABEL = {
+  'westside':'Westside','central-la':'Central L.A.','eastside':'Eastside','northeast-la':'Northeast L.A.','south-la':'South L.A.',
+  'san-fernando-valley':'San Fernando Valley','harbor':'Harbor','south-bay':'South Bay','verdugos':'Verdugos',
+  'southeast':'Southeast','san-gabriel-valley':'San Gabriel Valley','pomona-valley':'Pomona Valley',
+  'santa-monica-mountains':'Santa Monica Mtns','northwest-county':'Northwest County','antelope-valley':'Antelope Valley','angeles-forest':'Angeles Forest'
+};
+const REGION_ORDER = Object.keys(REGION_LABEL);
+const PRESETS = {
+  core: ['westside','central-la','eastside','northeast-la','south-la','san-fernando-valley','harbor','south-bay','verdugos'],
+  westside: ['westside'],
+  all: REGION_ORDER.slice()
+};
+const COLORS = ['#ff6b6b','#ffb84d','#ffe66d','#8ce99a','#38d9a9','#66d9e8','#74c0fc','#9775fa','#f783ac','#e599f7','#a9e34b','#ffa94d','#63e6be','#4dabf7','#da77f2','#ff8787','#ffd43b','#b197fc','#69db7c'];
+const regionColor = r => COLORS[REGION_ORDER.indexOf(r) % COLORS.length];
+const TYPE_LABEL = {'standalone-city':'Independent city','segment-of-a-city':'Neighborhood of the City of L.A.','unincorporated-area':'Unincorporated L.A. County'};
+
+const $ = s => document.querySelector(s);
+const state = {
+  mode:'learn', regions:new Set(PRESETS.core), cityOnly:false,
+  features:[], layersById:new Map(), pool:[],
+  q:null, score:0, asked:0, streak:0, roundLen:10, locked:false,
+  mastery: JSON.parse(localStorage.getItem('la_mastery')||'{}'),
+  best: JSON.parse(localStorage.getItem('la_best')||'{}')
+};
+const saveLS = () => { localStorage.setItem('la_mastery', JSON.stringify(state.mastery)); localStorage.setItem('la_best', JSON.stringify(state.best)); };
+const toast = m => { const t=$('#toast'); t.textContent=m; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),2200); };
+
+// URL params → state (lets a shared link reproduce the same setup)
+const params = new URLSearchParams(location.search);
+if (params.get('mode')) state.mode = params.get('mode');
+if (params.get('regions')) state.regions = new Set(params.get('regions').split(',').filter(r=>REGION_LABEL[r]));
+if (params.get('city')==='1') state.cityOnly = true;
+if (params.get('n')) state.roundLen = +params.get('n')||10;
+$('#roundLen').value = String(state.roundLen);
+
+// ---------- map ----------
+const map = L.map('map', {zoomControl:true, preferCanvas:true}).setView([34.05,-118.35], 10);
+const noLabels = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',{attribution:'Tiles &copy; Esri · Boundaries: LA Times Mapping L.A.',maxZoom:16}).addTo(map);
+const withLabels = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap contributors · Boundaries: LA Times Mapping L.A.',maxZoom:18});
+$('#labels').addEventListener('change', e => { if (e.target.checked){map.removeLayer(noLabels);withLabels.addTo(map);} else {map.removeLayer(withLabels);noLabels.addTo(map);} });
+
+let geo;
+function baseStyle(f){
+  const p=f.properties, on=inPool(f);
+  return {color: on?'#444':'#999', weight: on?1:0.5, fillColor: regionColor(p.r), fillOpacity: on? (state.mode==='learn'?0.45:0.25) : 0.05, opacity: on?1:0.4};
+}
+function inPool(f){ const p=f.properties; return state.regions.has(p.r) && (!state.cityOnly || p.c==='los-angeles'); }
+function masteryOf(id){ const m=state.mastery[id]; if(!m||!m.a) return null; return m.c/m.a; }
+function masteryColor(id){ const v=masteryOf(id); if(v===null) return '#555'; return v>=0.8?'#36c48a':v>=0.5?'#ffb84d':'#ff5c6c'; }
+
+Promise.all([fetch('neighborhoods.json').then(r=>r.json()), fetch('info.json').then(r=>r.json()).catch(()=>({}))]).then(([data, info])=>{
+  state.info = info || {};
+  state.features = data.features.map((f,i)=>{ f.id=i; return f; });
+  geo = L.geoJSON(data, {
+    style: baseStyle,
+    onEachFeature: (f, layer) => {
+      state.layersById.set(f.id, layer);
+      layer.on('mouseover', () => { if(state.mode==='learn'){ layer.setStyle({weight:2.5,color:'#111',fillOpacity:0.7}); layer.bringToFront(); showDetail(f);} else if(!state.locked){ layer.setStyle({weight:2,color:'#111'}); } });
+      layer.on('mouseout', () => { if(!layer._hold) geo.resetStyle(layer); });
+      layer.on('click', () => onClick(f, layer));
+    }
+  }).addTo(map);
+  buildChips(); setMode(state.mode); fitToPool();
+});
+
+function fitToPool(){
+  const b = L.latLngBounds([]);
+  state.features.forEach(f=>{ if(inPool(f)) b.extend(state.layersById.get(f.id).getBounds()); });
+  if (b.isValid()) map.fitBounds(b, {padding:[20,20]});
+}
+function refreshStyles(){ if(geo) geo.eachLayer(l=>{ l._hold=false; geo.resetStyle(l); }); }
+
+// ---------- regions UI ----------
+function buildChips(){
+  const c=$('#chips'); c.innerHTML='';
+  REGION_ORDER.forEach(r=>{
+    const n=state.features.filter(f=>f.properties.r===r).length;
+    const el=document.createElement('button'); el.className='chip'+(state.regions.has(r)?' on':''); el.dataset.r=r;
+    el.innerHTML=`<span class="sw" style="background:${regionColor(r)}"></span>${REGION_LABEL[r]} <span class="muted">${n}</span>`;
+    el.onclick=()=>{ state.regions.has(r)?state.regions.delete(r):state.regions.add(r); el.classList.toggle('on'); state.cityOnly=false; onPoolChange(); };
+    c.appendChild(el);
+  });
+}
+document.querySelectorAll('[data-preset]').forEach(b=>b.onclick=()=>{
+  const p=b.dataset.preset;
+  if(p==='city'){ state.cityOnly=true; state.regions=new Set(REGION_ORDER); }
+  else { state.cityOnly=false; state.regions=new Set(PRESETS[p]); }
+  buildChips(); onPoolChange(); fitToPool();
+});
+function onPoolChange(){ state.pool=state.features.filter(inPool); refreshStyles(); renderList(); if(state.mode!=='learn') startRound(); }
+
+// ---------- learn ----------
+const fmt=n=>n==null?null:Number(n).toLocaleString('en-US');
+function firstSentences(s,n){ if(!s) return ''; const parts=s.match(/[^.!?]+[.!?]+(\s|$)/g)||[s]; return parts.slice(0,n).join('').trim(); }
+function showDetail(f){
+  const p=f.properties, m=state.mastery[f.id], I=(state.info||{})[p.n]||{};
+  const st=(l,v)=>v==null?'':`<div class="st"><span>${l}</span><b>${v}</b></div>`;
+  const pop=I.pop2008||I.pop2000;
+  let eth='';
+  if(I.ethnicity){ eth='<div class="eth">'+['Latino','White','Asian','Black','Other'].filter(k=>I.ethnicity[k]!=null).map(k=>`<div class="bar"><span>${k}</span><div class="track"><i style="width:${Math.min(100,I.ethnicity[k])}%"></i></div><em>${I.ethnicity[k]}%</em></div>`).join('')+(I.diversity?`<div class="muted" style="font-size:12px;margin-top:4px">${I.diversity} (county comparison)</div>`:'')+'</div>'; }
+  const hasStats=I.income!=null||I.sqmi!=null;
+  $('#detail').innerHTML=`<div class="name">${p.n}</div>
+    <div><span class="sw" style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${regionColor(p.r)};margin-right:6px"></span>${REGION_LABEL[p.r]} <span class="muted">· ${TYPE_LABEL[p.t]||p.t}</span></div>
+    ${I.blurb?`<p class="blurb">${I.blurb}</p>`:''}
+    ${hasStats?`<div class="stats2">${st('Population',pop?fmt(pop)+(I.pop2008?' <span class="muted">(2008 est.)</span>':' <span class="muted">(2000)</span>'):null)}${st('Area',I.sqmi!=null?I.sqmi+' sq mi':null)}${st('Density',I.density?fmt(I.density)+' / sq mi':null)}${st('Median household income',I.income?'$'+fmt(I.income):null)}${st('Median age',I.medianAge)}${st('Four-year degree',I.degreePct!=null?I.degreePct+'%':null)}${st('Foreign born',I.foreignPct!=null?I.foreignPct+'%':null)}${st('Top origins',I.origins&&I.origins.length?I.origins.join(', '):null)}${st('Household size',I.hhSize)}</div>${eth}`:''}
+    ${m?`<div class="muted" style="margin-top:6px">Your quiz record: ${m.c}/${m.a} correct</div>`:''}
+    <div class="src">${I.wiki?`<a href="${I.wiki}" target="_blank" rel="noopener">Wikipedia</a>`:''}${I.wiki&&I.lat?' · ':''}${I.lat?`<a href="${I.lat}" target="_blank" rel="noopener">LA Times profile</a>`:''}${hasStats?'<div class="muted">Stats: LA Times Mapping L.A. (2000 Census, 2008 estimates)</div>':''}</div>`;
+}
+function renderList(){
+  const q=($('#search').value||'').toLowerCase();
+  const rows=$('#rows'); rows.innerHTML='';
+  state.pool.filter(f=>f.properties.n.toLowerCase().includes(q)).sort((a,b)=>a.properties.n.localeCompare(b.properties.n)).forEach(f=>{
+    const p=f.properties; const d=document.createElement('div'); d.className='row';
+    d.innerHTML=`<span class="sw" style="background:${regionColor(p.r)}"></span>${p.n}<span class="meta">${p.t==='standalone-city'?'city':p.t==='unincorporated-area'?'unincorp.':''}</span><span class="m" style="background:${masteryColor(f.id)}"></span>`;
+    d.onclick=()=>{ const l=state.layersById.get(f.id); map.fitBounds(l.getBounds(),{padding:[40,40],maxZoom:14}); showDetail(f); flash(l,'#111',900); };
+    rows.appendChild(d);
+  });
+}
+$('#search').addEventListener('input', renderList);
+function flash(layer,color,ms){ layer._hold=true; layer.setStyle({weight:3,color,fillOpacity:0.75}); layer.bringToFront(); setTimeout(()=>{ layer._hold=false; geo.resetStyle(layer); }, ms); }
+
+// ---------- modes ----------
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
+function setMode(m){
+  state.mode=m;
+  document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.mode===m));
+  $('#quizPanel').style.display = m==='learn'?'none':'';
+  $('#learnPanel').style.display = m==='learn'?'':'none';
+  $('#list').style.display = m==='learn'?'':'none';
+  state.pool=state.features.filter(inPool); refreshStyles(); renderList();
+  if(m!=='learn') startRound(); else { geo && geo.eachLayer(l=>l.unbindTooltip()); }
+}
+
+// ---------- quiz ----------
+function pickNext(){
+  // weight toward neighborhoods you've missed; avoid immediate repeat
+  const cands=state.pool.filter(f=>!state.q||f.id!==state.q.id);
+  const w=cands.map(f=>{ const m=state.mastery[f.id]; if(!m||!m.a) return 3; return 1+ (m.a-m.c)*2 + (m.c>=3?0:1); });
+  let r=Math.random()*w.reduce((a,b)=>a+b,0);
+  for(let i=0;i<cands.length;i++){ r-=w[i]; if(r<=0) return cands[i]; }
+  return cands[cands.length-1];
+}
+function startRound(){
+  state.score=0; state.asked=0; state.streak=0; state.locked=false; state.q=null;
+  $('#end').style.display='none'; $('#skip').style.display=''; updateStats();
+  if(state.pool.length<2){ $('#prompt').textContent='Pick at least one region with 2+ neighborhoods.'; $('#sub').textContent=''; $('#choices').innerHTML=''; return; }
+  nextQ();
+}
+function bestKey(){ return state.mode+'|'+state.roundLen+'|'+(state.cityOnly?'city':[...state.regions].sort().join(',')); }
+function updateStats(){
+  $('#score').textContent=state.score; $('#asked').textContent=state.asked; $('#streak').textContent=state.streak;
+  const b=state.best[bestKey()]; $('#best').textContent=b==null?'–':b+'/'+state.roundLen;
+}
+function nextQ(){
+  if(state.asked>=state.roundLen) return endRound();
+  state.locked=false; refreshStyles(); $('#feedback').textContent=''; $('#feedback').className=''; $('#fact').textContent=''; $('#skip').textContent='Skip';
+  clearTimeout(state.timer); state.q=pickNext();
+  const p=state.q.properties;
+  if(state.mode==='find'){
+    $('#prompt').textContent=p.n; $('#sub').textContent=`Click it on the map · ${REGION_LABEL[p.r]} · ${state.asked+1} of ${state.roundLen}`;
+    $('#choices').innerHTML='';
+  } else {
+    const l=state.layersById.get(state.q.id);
+    l._hold=true; l.setStyle({weight:3,color:'#111',fillOpacity:0.8}); l.bringToFront();
+    map.fitBounds(l.getBounds(),{padding:[60,60],maxZoom:13});
+    $('#prompt').textContent='What is this neighborhood?'; $('#sub').textContent=`${REGION_LABEL[p.r]} · ${state.asked+1} of ${state.roundLen}`;
+    const same=state.pool.filter(f=>f.id!==state.q.id&&f.properties.r===p.r), other=state.pool.filter(f=>f.id!==state.q.id&&f.properties.r!==p.r);
+    const d=shuffle(same).slice(0,3); while(d.length<3&&other.length) d.push(shuffle(other).find(f=>!d.includes(f)));
+    const opts=shuffle([state.q,...d.filter(Boolean)]);
+    $('#choices').innerHTML='';
+    opts.forEach(f=>{ const b=document.createElement('button'); b.textContent=f.properties.n; b.onclick=()=>answer(f, b); $('#choices').appendChild(b); });
+  }
+}
+function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function record(id, ok){ const m=state.mastery[id]||(state.mastery[id]={c:0,a:0}); m.a++; if(ok) m.c++; saveLS(); }
+function onClick(f, layer){
+  if(state.mode==='learn'){ showDetail(f); return; }
+  if(state.mode==='find' && !state.locked && inPool(f)) answer(f, null, layer);
+}
+function answer(f, btn, layer){
+  if(state.locked) return; state.locked=true;
+  const ok=f.id===state.q.id; state.asked++; record(state.q.id, ok);
+  const qLayer=state.layersById.get(state.q.id);
+  if(ok){ state.score++; state.streak++; $('#feedback').textContent='✓ Correct — '+state.q.properties.n; $('#feedback').className='good'; }
+  else { state.streak=0; $('#feedback').textContent=`✗ That was ${f.properties.n}. ${state.q.properties.n} is highlighted in green.`; $('#feedback').className='bad'; }
+  qLayer._hold=true; qLayer.setStyle({color:'#1b7f4f',fillColor:'#36c48a',fillOpacity:0.85,weight:3}); qLayer.bringToFront();
+  if(!ok && layer){ layer._hold=true; layer.setStyle({color:'#a0202e',fillColor:'#ff5c6c',fillOpacity:0.8,weight:3}); }
+  if(btn){ btn.classList.add(ok?'good':'bad'); [...$('#choices').children].forEach(b=>{ if(b.textContent===state.q.properties.n) b.classList.add('good'); b.disabled=true; }); }
+  if(state.mode==='find') qLayer.bindTooltip(state.q.properties.n,{permanent:true,direction:'center',className:'nb'}).openTooltip();
+  updateStats();
+  const I=(state.info||{})[state.q.properties.n]; $('#fact').textContent = I&&I.blurb ? firstSentences(I.blurb,2) : '';
+  $('#skip').textContent='Next ▸';
+  state.timer=setTimeout(()=>{ qLayer.unbindTooltip(); nextQ(); }, ok?3500:5500);
+}
+$('#skip').onclick=()=>{ if(state.mode==='learn'||!state.q) return; if(state.locked){ if($('#end').style.display!=='none') return; clearTimeout(state.timer); state.layersById.get(state.q.id).unbindTooltip(); nextQ(); return; } answer({id:-1,properties:{n:'skipped'}}, null, null); };
+document.addEventListener('keydown', e=>{ if((e.key==='Enter'||e.key===' ')&&state.mode!=='learn'&&state.locked&&e.target.tagName!=='INPUT'&&e.target.tagName!=='SELECT'){ e.preventDefault(); $('#skip').click(); } });
+$('#roundLen').onchange=e=>{ state.roundLen=+e.target.value; startRound(); };
+$('#again').onclick=startRound;
+function endRound(){
+  state.locked=true; refreshStyles();
+  const k=bestKey(); if(state.best[k]==null||state.score>state.best[k]) state.best[k]=state.score; saveLS(); updateStats();
+  const pct=Math.round(100*state.score/state.roundLen);
+  $('#prompt').textContent=`Round over: ${state.score}/${state.roundLen}`; $('#sub').textContent=pct===100?'Perfect. You are a local.':pct>=70?'Solid. Keep going.':'Hit Learn mode and try again.';
+  $('#choices').innerHTML=''; $('#feedback').textContent=''; $('#skip').style.display='none';
+  $('#end').style.display=''; $('#endText').textContent='';
+}
+
+// ---------- share ----------
+function shareUrl(){
+  const u=new URL(location.href.split('?')[0]);
+  u.searchParams.set('mode', state.mode==='learn'?'find':state.mode);
+  if(state.cityOnly) u.searchParams.set('city','1'); else u.searchParams.set('regions',[...state.regions].join(','));
+  u.searchParams.set('n', state.roundLen);
+  return u.toString();
+}
+async function share(text, url){
+  if(navigator.share){ try{ await navigator.share({title:'LA Neighborhoods quiz', text, url}); return; }catch(e){} }
+  try{ await navigator.clipboard.writeText(text?text+' '+url:url); toast('Link copied to clipboard'); }catch(e){ prompt('Copy this link:', url); }
+}
+$('#shareBtn').onclick=()=>share('', shareUrl());
+$('#shareScore').onclick=()=>{
+  const label=state.mode==='find'?'Find it':'Name it', scope=state.cityOnly?'City of LA':(state.regions.size===REGION_ORDER.length?'whole LA County':[...state.regions].map(r=>REGION_LABEL[r]).join(', '));
+  share(`I scored ${state.score}/${state.roundLen} on LA Neighborhoods (${label}, ${scope}). Beat me:`, shareUrl());
+};
+})();
+</script>
+</body>
+</html>
